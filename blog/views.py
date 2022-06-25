@@ -39,7 +39,7 @@ def serialize_post_optimized(post):
 def serialize_tag(tag):
     return {
         'title': tag.title,
-        'posts_with_tag': len(Post.objects.filter(tags=tag)),
+        'posts_with_tag': tag.posts.count(),
     }
 
 
@@ -52,9 +52,7 @@ def index(request):
         '-published_at'
     )[:5].prefetch_related('author', 'comments')
 
-    most_popular_tags = Tag.objects.annotate(
-        count_tags=Count('posts'),
-    ).order_by('-count_tags')[:5]
+    most_popular_tags = Tag.objects.popular()[:5]
 
     context = {
         'most_popular_posts': [
@@ -95,11 +93,13 @@ def post_detail(request, slug):
         'tags': [serialize_tag(tag) for tag in related_tags],
     }
 
-    all_tags = Tag.objects.all()
-    popular_tags = sorted(all_tags, key=get_related_posts_count)
-    most_popular_tags = popular_tags[-5:]
+    most_popular_tags = Tag.objects.popular()[:5].prefetch_related('posts')
 
     most_popular_posts = []  # TODO. Как это посчитать?
+
+    # most_popular_posts = Post.objects.annotate(
+    #     likes_count=Count('likes')
+    # ).order_by('-likes_count')[:5].prefetch_related('author', 'comments')
 
     context = {
         'post': serialized_post,
@@ -114,13 +114,15 @@ def post_detail(request, slug):
 def tag_filter(request, tag_title):
     tag = Tag.objects.get(title=tag_title)
 
-    all_tags = Tag.objects.all()
-    popular_tags = sorted(all_tags, key=get_related_posts_count)
-    most_popular_tags = popular_tags[-5:]
+    most_popular_tags = Tag.objects.popular()[:5].prefetch_related('posts')
 
     most_popular_posts = []  # TODO. Как это посчитать?
 
-    related_posts = tag.posts.all()[:20]
+    # most_popular_posts = Post.objects.annotate(
+    #     likes_count=Count('likes')
+    # ).order_by('-likes_count')[:5].prefetch_related('author', 'comments')
+
+    related_posts = tag.posts.all()[:20].prefetch_related('comments')
 
     context = {
         'tag': tag.title,
