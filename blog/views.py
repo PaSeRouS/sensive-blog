@@ -28,8 +28,28 @@ def serialize_tag(tag):
 
 
 def index(request):
+    posts = Post.objects.all()
+    posts_with_likes = []
 
-    most_popular_posts = []  # TODO. Как это посчитать?
+    for post in posts:
+        post_with_likes =  {
+            'post': post,
+            'likes': post.likes.count()
+        }
+
+        posts_with_likes.append(post_with_likes)
+
+    posts_with_likes = list(
+        sorted(
+            posts_with_likes,
+            key=get_likes_count
+        )
+    )[-5:]
+
+    most_popular_posts = []
+
+    for post in posts_with_likes:
+        most_popular_posts.append(post['post'])
 
     fresh_posts = Post.objects.order_by('published_at')
     most_fresh_posts = list(fresh_posts)[-5:]
@@ -117,3 +137,7 @@ def contacts(request):
     # позже здесь будет код для статистики заходов на эту страницу
     # и для записи фидбека
     return render(request, 'contacts.html', {})
+
+
+def get_likes_count(post):
+    return post['likes']
