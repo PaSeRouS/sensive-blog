@@ -19,10 +19,17 @@ class PostQuerySet(models.QuerySet):
 
 
     def fetch_with_comments_count(self):
-        self_with_comments = self.prefetch_related('comments')
-        for post in self_with_comments:
-            post.count_comments = post.comments.count()
-        return self_with_comments
+        posts_ids = self.values_list("id", flat=True)
+        posts_with_comments = Post.objects.filter(id__in=posts_ids) \
+                                          .annotate(
+                                            count_comments=Count("comments")
+                                          )
+        ids_and_comments = dict(
+            posts_with_comments.values_list("id", "count_comments")
+        )
+        for post in self:
+            post.count_comments = ids_and_comments[post.id]
+        return self
 
 
 class TagQuerySet(models.QuerySet):
